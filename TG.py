@@ -26,21 +26,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('Try typing anything and I will do my best to respond!')
 async def handle_response(text: str,update: Update) -> str:
-    # Create your own response logic
-    processed: str = text.lower()
-    if(processed=='login'):
-        await update.message.reply_text('Enter your Username')
-        Un:str=
-        if(Un=='anew'):
-            await update.message.reply_text('Enter your password')
-            ps:str=update.message.text
-            if(ps=='anew'):
-                return 'Success'
-            else:
-                return 'Username or password is incorrect'
 
-        else:
-            return 'Username or password is incorrect'
 
         
 
