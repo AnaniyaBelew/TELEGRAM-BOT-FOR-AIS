@@ -3,7 +3,7 @@
 from typing import Final
 
 # pip install python-telegram-bot
-from telegram import Update
+from telegram import Update,ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 print('Starting up bot...')
@@ -14,18 +14,54 @@ BOT_USERNAME: Final = '@Aisais_bot'
 
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Hello there! This is Automated Insurance Customer support BOT How Can I help you')
+    reply_keyboard = [["Login", "FAQ"]]
+    await update.message.reply_text(
+        "Hi! This is AIS BOT "
+        "Choose\n\n"
+        "What you want to do",
+        reply_markup=ReplyKeyboardMarkup(
+            reply_keyboard, one_time_keyboard=True, input_field_placeholder="Choose",resize_keyboard=True
+        ),
+    )
 
 
 # Lets us use the /help command
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Try typing anything and I will do my best to respond!')
+    await update.message.reply_text(
+        "1: Lorem Ipsum is simplywhen an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\n" 
+        "2: It has survived not only five centuries.\n\n"
+        "3: Lorem Ipsum is simply dummy text of the printing and typesetting industry.\n\n"
+        "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 
 # Lets us use the /custom command
 async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text('Try typing anything and I will do my best to respond!')
-async def handle_response(text: str,update: Update) -> str:
+    await update.message.reply_text(
+        "Wellcome To AIS Please Enter your username and password ",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    async def check():
+        txt:str =update.message.text
+        if(txt=="anew"):
+            await update.message.reply_to_message("Success")
+        else:
+            await update.message.reply_to_message("Failed")
+def handle_response(text: str) -> str:
+    processed: str = text.lower()
+
+    if 'hello' in processed:
+        return 'Hey there!'
+
+    if 'how are you' in processed:
+        return 'I\'m good!'
+
+    if 'i love python' in processed:
+        return 'Remember to subscribe!'
+
+    return 'I don\'t understand'
+
 
 
         
@@ -47,7 +83,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             return  # We don't want the bot respond if it's not mentioned in the group
     else:
-        response: str = handle_response(text,update)
+        response: str = handle_response(text)
 
     # Reply normal if the message is in private
     print('Bot:', response)
