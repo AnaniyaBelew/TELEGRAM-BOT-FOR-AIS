@@ -1,28 +1,22 @@
-
-
+import requests
+import telegram
 from typing import Final
 
 # pip install python-telegram-bot
 from telegram import Update,ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes,CallbackContext,ConversationHandler
 
 print('Starting up bot...')
 
 TOKEN: Final = '6276254374:AAGTBqXm5l_AWzVv7nvZht1JtJOLzndaYHI'
 BOT_USERNAME: Final = '@Aisais_bot'
-
+USERNAME, PASSWORD = range(2)
 
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    reply_keyboard = [["Login", "FAQ"]]
-    await update.message.reply_text(
-        "Hi! This is AIS BOT "
-        "Choose\n\n"
-        "What you want to do",
-        reply_markup=ReplyKeyboardMarkup(
-            reply_keyboard, one_time_keyboard=True, input_field_placeholder="Choose",resize_keyboard=True
-        ),
-    )
+    await update.message.reply_text("Hello this is the AIS customer support BOT Please Enter your username")
+    return USERNAME
+    
 
 
 # Lets us use the /help command
@@ -34,38 +28,36 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
     )
+async def username(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['username']=update.message.text
+    await update.message.reply_text("Ok now enter your password")
+    return PASSWORD
+async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    username = context.user_data['username']
+    password = update.message.text
+
+    # Perform login verification here
+    if username == "Anew" and password == "Anew":
+        await update.message.reply_text("Login successful!")
+        # Do something after successful login
+    else:
+        await update.message.reply_text("Incorrect username/password.")
+
+    return ConversationHandler.END
+
 
 
 # Lets us use the /custom command
-async def login_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "Wellcome To AIS Please Enter your username and password ",
-        reply_markup=ReplyKeyboardRemove()
-    )
-    async def check():
-        txt:str =update.message.text
-        if(txt=="anew"):
-            await update.message.reply_to_message("Success")
-        else:
-            await update.message.reply_to_message("Failed")
+""" 
 def handle_response(text: str) -> str:
+    # Create your own response logic
     processed: str = text.lower()
-
-    if 'hello' in processed:
-        return 'Hey there!'
-
     if 'how are you' in processed:
         return 'I\'m good!'
-
     if 'i love python' in processed:
         return 'Remember to subscribe!'
 
     return 'I don\'t understand'
-
-
-
-        
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Get basic info of the incoming message
     message_type: str = update.message.chat.type
@@ -89,10 +81,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print('Bot:', response)
     await update.message.reply_text(response)
 
+    
 
+ """
 # Log errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f'Update {update} caused error {context.error}')
+    print(f'Update {update} caused error: {context.error}')
 
 
 # Run the program
@@ -102,10 +96,16 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('login', login_command))
-
     # Messages
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start_command)],
+        states={
+            USERNAME: [MessageHandler(filters.TEXT, username)],
+            PASSWORD: [MessageHandler(filters.TEXT, password)]
+        },
+        fallbacks=[]
+    )
+    app.add_handler(conv_handler)
 
     # Log all errors
     app.add_error_handler(error)
