@@ -1,3 +1,4 @@
+import requests
 from typing import Final
 # pip install python-telegram-bot
 from telegram import Update,ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -19,6 +20,20 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
     )
+def Send_credential(username,password):
+    api_url = "http://localhost:3000/get_credential"
+    payload = {
+        "username": username,
+        "password": password
+    }
+    try:
+        response = requests.post(api_url, data=payload)
+        response.raise_for_status()  # Raise an exception if the request was not successful
+        return response.text  # Return the response from the API
+    except requests.exceptions.RequestException as e:
+        # Handle any errors that occurred during the request
+        print(f"An error occurred: {e}")
+        return None
 async def login(update:Update,context:ContextTypes.DEFAULT_TYPE):
     global data
     data={'username':'','password':''}
@@ -30,10 +45,9 @@ async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
     return PASSWORD
 async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['password']=update.message.text
-    if(data['username']=='Anew' and data['password']=='Anew'):
-        await update.message.reply_text("Success")
-    else:
-        await update.message.reply_text("Faild")
+    resp=Send_credential(data['username'],data['password'])
+    if resp:
+        print(f"API Response: {resp}")
     return ConversationHandler.END
 async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('canceled')
