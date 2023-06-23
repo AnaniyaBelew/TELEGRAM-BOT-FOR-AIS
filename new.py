@@ -1,57 +1,90 @@
+from typing import Final
 
-import logging
+# pip install python-telegram-bot
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
-logger = logging.getLogger(__name__)
+print('Starting up bot...')
 
-# Set the credentials for authentication
-valid_username = "admin"
-valid_password = "password"
+TOKEN: Final = '6214753896:AAEyoypGyT84yxz3e3hWqsYGQdW8SZvylPA'
+BOT_USERNAME: Final = '@AISASTU_bot'
 
-# Define the start command handler
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text('Hi! Please enter your username and password to login.')
 
-# Define the login command handler
-def login(update: Update, context: CallbackContext):
-    # Get the user's input
-    user_input = update.message.text.split()
+# Lets us use the /start command
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Hello there! I\'m a bot. What\'s up?')
 
-    if len(user_input) != 3:
-        update.message.reply_text('Invalid input! Please enter your username and password separated by a space.')
-        return
 
-    username = user_input[1]
-    password = user_input[2]
+# Lets us use the /help command
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Try typing anything and I will do my best to respond!')
 
-    if username == valid_username and password == valid_password:
-        update.message.reply_text('Login successful!')
+
+# Lets us use the /custom command
+async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('This is a custom command, you can add whatever text you want here.')
+
+
+def handle_response(text: str) -> str:
+    # Create your own response logic
+    processed: str = text.lower()
+
+    if 'hello' in processed:
+        return 'Hey there!'
+
+    if 'how are you' in processed:
+        return 'I\'m good!'
+
+    if 'i love python' in processed:
+        return 'Remember to subscribe!'
+
+    return 'I don\'t understand'
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Get basic info of the incoming message
+    message_type: str = update.message.chat.type
+    text: str = update.message.text
+
+    # Print a log for debugging
+    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
+
+    # React to group messages only if users mention the bot directly
+    if message_type == 'group':
+        # Replace with your bot username
+        if BOT_USERNAME in text:
+            new_text: str = text.replace(BOT_USERNAME, '').strip()
+            response: str = handle_response(new_text)
+        else:
+            return  # We don't want the bot respond if it's not mentioned in the group
     else:
-        update.message.reply_text('Invalid username or password!')
+        response: str = handle_response(text)
 
-# Define the main function to start the bot
-def main():
-    # Create an instance of the Updater class and pass your bot's token
-    updater = Updater('6276254374:AAGTBqXm5l_AWzVv7nvZht1JtJOLzndaYHI',True)
+    # Reply normal if the message is in private
+    print('Bot:', response)
+    await update.message.reply_text(response)
 
-    # Get the dispatcher to register handlers
-    dispatcher = updater.dispatcher
 
-    # Add handlers for the supported commands
-    dispatcher.add_handler(CommandHandler('start', start))
-    dispatcher.add_handler(CommandHandler('login', login))
+# Log errors
+async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f'Update {update} caused error {context.error}')
 
-    # Start the bot
-    updater.start_polling()
 
-    # Run the bot until you press Ctrl-C
-    updater.idle()
-
-# Run the main function
+# Run the program
 if __name__ == '__main__':
-    main()
+    app = Application.builder().token(TOKEN).build()
 
+    # Commands
+    app.add_handler(CommandHandler('start', start_command))
+    app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('custom', custom_command))
+
+    # Messages
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+
+    # Log all errors
+    app.add_error_handler(error)
+
+    print('Polling...')
+    # Run the bot
+    app.run_polling(poll_interval=5)

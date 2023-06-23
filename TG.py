@@ -1,25 +1,17 @@
-import requests
-import telegram
 from typing import Final
-
 # pip install python-telegram-bot
 from telegram import Update,ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes,CallbackContext,ConversationHandler
-
 print('Starting up bot...')
-
-TOKEN: Final = '6276254374:AAGTBqXm5l_AWzVv7nvZht1JtJOLzndaYHI'
-BOT_USERNAME: Final = '@Aisais_bot'
-USERNAME, PASSWORD = range(2)
-
+TOKEN: Final = '6214753896:AAEyoypGyT84yxz3e3hWqsYGQdW8SZvylPA'
+BOT_USERNAME: Final = '@AISASTU_bot'
+data={'username':'','password':''}
+USERNAME=1 
+PASSWORD =2
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello this is the AIS customer support BOT Please Enter your username")
-    return USERNAME
-    
-
-
-# Lets us use the /help command
+    context.user_data['username']
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "1: Lorem Ipsum is simplywhen an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\n" 
@@ -28,32 +20,55 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
     )
-async def username(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data['username']=update.message.text
-    await update.message.reply_text("Ok now enter your password")
+async def login(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    global data
+    data={'username':'','password':''}
+    await update.message.reply_text("add username and password in separated messages\n\nnow write Username")
+    return USERNAME
+async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    data['username']=update.message.text
+    await update.message.reply_text(f"username: {update.message.text}\n\nnow write password")
     return PASSWORD
-async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    username = context.user_data['username']
-    password = update.message.text
+async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    data['password']=update.message.text
+    await update.message.reply_text(f"Password: {update.message.text}")
+    msg = """I got all data
 
-    # Perform login verification here
-    if username == "Anew" and password == "Anew":
-        await update.message.reply_text("Login successful!")
-        # Do something after successful login
-    else:
-        await update.message.reply_text("Incorrect username/password.")
-
+title: {}
+text: {}
+comments: {}""".format(data['username'], data['password'])
+    await update.message.reply_text(msg)
     return ConversationHandler.END
+async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('canceled')
+    # end of conversation
+    return ConversationHandler.END
+my_conversation_handler = ConversationHandler(
+   entry_points=[CommandHandler('login', login)],
+   states={
+       USERNAME: [
+           CommandHandler('cancel', cancel),  # has to be before MessageHandler to catch `/cancel` as command, not as `title`
+           MessageHandler(filters.TEXT, get_username)
+       ],
+       PASSWORD: [
+           CommandHandler('cancel', cancel),  # has to be before MessageHandler to catch `/cancel` as command, not as `text`
+           MessageHandler(filters.TEXT, get_password)
+       ],
+   },
+   fallbacks=[CommandHandler('cancel', cancel)],
+   conversation_timeout=None
+) 
 
-
-
-# Lets us use the /custom command
-""" 
-def handle_response(text: str) -> str:
+""" def handle_response(text: str) -> str:
     # Create your own response logic
     processed: str = text.lower()
+
+    if 'hello' in processed:
+        return 'Hey there!'
+
     if 'how are you' in processed:
         return 'I\'m good!'
+
     if 'i love python' in processed:
         return 'Remember to subscribe!'
 
@@ -79,16 +94,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Reply normal if the message is in private
     print('Bot:', response)
-    await update.message.reply_text(response)
-
-    
-
- """
+    await update.message.reply_text(response) """
 # Log errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f'Update {update} caused error: {context.error}')
-
-
+    print(f'Update {update} caused error {context.error}')
 # Run the program
 if __name__ == '__main__':
     app = Application.builder().token(TOKEN).build()
@@ -96,20 +105,13 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('login', login))
     # Messages
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start_command)],
-        states={
-            USERNAME: [MessageHandler(filters.TEXT, username)],
-            PASSWORD: [MessageHandler(filters.TEXT, password)]
-        },
-        fallbacks=[]
-    )
-    app.add_handler(conv_handler)
-
+    # app.add_handler(MessageHandler(filters.TEXT, handle_message))
+    app.add_handler( my_conversation_handler)
     # Log all errors
     app.add_error_handler(error)
 
     print('Polling...')
     # Run the bot
-    app.run_polling(poll_interval=1)
+    app.run_polling(poll_interval=5)
