@@ -11,7 +11,6 @@ PASSWORD =2
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello this is the AIS customer support BOT Please Enter your username")
-    context.user_data['username']
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "1: Lorem Ipsum is simplywhen an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\n" 
@@ -31,13 +30,10 @@ async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
     return PASSWORD
 async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['password']=update.message.text
-    await update.message.reply_text(f"Password: {update.message.text}")
-    msg = """I got all data
-
-title: {}
-text: {}
-comments: {}""".format(data['username'], data['password'])
-    await update.message.reply_text(msg)
+    if(data['username']=='Anew' and data['password']=='Anew'):
+        await update.message.reply_text("Success")
+    else:
+        await update.message.reply_text("Faild")
     return ConversationHandler.END
 async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('canceled')
@@ -105,7 +101,6 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
-    app.add_handler(CommandHandler('login', login))
     # Messages
     # app.add_handler(MessageHandler(filters.TEXT, handle_message))
     app.add_handler( my_conversation_handler)
