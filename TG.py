@@ -1,5 +1,7 @@
 import requests
+import json
 from typing import Final
+from prettytable import PrettyTable
 # pip install python-telegram-bot
 from telegram import Update,ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes,CallbackContext,ConversationHandler
@@ -7,6 +9,7 @@ print('Starting up bot...')
 TOKEN: Final = '6214753896:AAEyoypGyT84yxz3e3hWqsYGQdW8SZvylPA'
 BOT_USERNAME: Final = '@AISASTU_bot'
 data={'username':'','password':''}
+logged_in=False
 USERNAME=1 
 PASSWORD =2
 # Lets us use the /start command
@@ -20,8 +23,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
     )
-def Send_credential(username,password):
-    api_url = "http://localhost:3000/get_credential"
+def get_bearer(username,password):
+    api_url = "http://ais.blackneb.com/api/token/"
     payload = {
         "username": username,
         "password": password
@@ -34,6 +37,40 @@ def Send_credential(username,password):
         # Handle any errors that occurred during the request
         print(f"An error occurred: {e}")
         return None
+def login_access(username,password,tok):
+    api_url = "http://ais.blackneb.com/api/ais/login"
+    headers= {
+     "Authorization": f"Bearer {tok}",
+}
+    payload = {
+        "username": username,
+        "password": password
+    }
+    try:
+        response = requests.post(api_url, headers=headers,data=payload)
+        response.raise_for_status()  # Raise an exception if the request was not successful
+        return response.text  # Return the response from the API
+    except requests.exceptions.RequestException as e:
+        # Handle any errors that occurred during the request
+        print(f"An error occurred: {e}")
+        return None
+def get_claims(id):
+    api_url = "http://ais.blackneb.com/api/ais/getclaimsbot"
+    payload = {
+        "proposerID": id,
+    }
+    try:
+        response = requests.post(api_url,data=payload)
+        response.raise_for_status()  # Raise an exception if the request was not successful
+        return response.text  # Return the response from the API
+    except requests.exceptions.RequestException as e:
+        # Handle any errors that occurred during the request
+        print(f"An error occurred: {e}")
+        return None
+def print_dict_as_table(dictionary):
+    table = PrettyTable(dictionary.keys())
+    table.add_row(dictionary.values())
+    return table
 async def login(update:Update,context:ContextTypes.DEFAULT_TYPE):
     global data
     data={'username':'','password':''}
@@ -45,9 +82,22 @@ async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
     return PASSWORD
 async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['password']=update.message.text
-    resp=Send_credential(data['username'],data['password'])
-    if resp:
-        print(f"API Response: {resp}")
+    resp_auth=get_bearer(data['username'],data['password'])
+    newresp=json.loads(resp_auth)
+    ref=newresp['refresh']
+    acc=newresp['access']
+    resp_acc=login_access(data['username'],data['password'],str(acc))
+    newresp_acc=json.loads(resp_acc)
+    stat=newresp_acc[0]
+    if(stat['status']=='pass'):
+        getresp=json.loads(get_claims(stat['proposerID']))
+        claim=getresp[0]
+        claim_displayed=print_dict_as_table(claim)
+        await update.message.reply_text("login success\n"+str(claim_displayed))
+        print("login Success")
+    else:
+        await update.message.reply_text("login failed. Please login again")
+        print("login Failed")
     return ConversationHandler.END
 async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('canceled')
@@ -68,43 +118,6 @@ my_conversation_handler = ConversationHandler(
    fallbacks=[CommandHandler('cancel', cancel)],
    conversation_timeout=None
 ) 
-
-""" def handle_response(text: str) -> str:
-    # Create your own response logic
-    processed: str = text.lower()
-
-    if 'hello' in processed:
-        return 'Hey there!'
-
-    if 'how are you' in processed:
-        return 'I\'m good!'
-
-    if 'i love python' in processed:
-        return 'Remember to subscribe!'
-
-    return 'I don\'t understand'
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Get basic info of the incoming message
-    message_type: str = update.message.chat.type
-    text: str = update.message.text
-
-    # Print a log for debugging
-    print(f'User ({update.message.chat.id}) in {message_type}: "{text}"')
-
-    # React to group messages only if users mention the bot directly
-    if message_type == 'group':
-        # Replace with your bot username
-        if BOT_USERNAME in text:
-            new_text: str = text.replace(BOT_USERNAME, '').strip()
-            response: str = handle_response(new_text)
-        else:
-            return  # We don't want the bot respond if it's not mentioned in the group
-    else:
-        response: str = handle_response(text)
-
-    # Reply normal if the message is in private
-    print('Bot:', response)
-    await update.message.reply_text(response) """
 # Log errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f'Update {update} caused error {context.error}')
