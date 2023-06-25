@@ -1,7 +1,8 @@
 import requests
 import json
 from prettytable import PrettyTable
-data={'username':"tase",'password':'tase'}
+data={'username':"anteneh",'password':'anteneh'}
+logged_in=False
 def get_bearer(username,password):
     api_url = "http://ais.blackneb.com/api/token/"
     payload = {
@@ -61,13 +62,17 @@ acc=newresp['access']
 resp_acc=login_access(data['username'],data['password'],str(acc))
 newresp_acc=json.loads(resp_acc)
 stat=newresp_acc[0]
-getresp=json.loads(get_claims(stat['proposerID']))
-claim=getresp[0]
-keys_to_divide = ['id', 'proposer', 'accident_id ','created_at']
+#logged_in=True
+if logged_in:
+    getresp=json.loads(get_claims(stat['proposerID']))
+    claim=getresp[0]
+    keys_to_divide = ['id', 'proposer', 'accident_id','created_at','vehicle']
 
-dict1, dict2 = divide_dict(claim, keys_to_divide)
-print_dict_as_table(dict1)
-print_dict_as_table(dict2)
+    dict1, dict2 = divide_dict(claim, keys_to_divide)
+    print_dict_as_table(dict1)
+    print_dict_as_table(dict2)
+else:
+    print("fail")
 
 
 

@@ -12,9 +12,11 @@ data={'username':'','password':''}
 logged_in=False
 USERNAME=1 
 PASSWORD =2
+proposerid=''
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello this is the AIS customer support BOT Please Enter your username")
+    await update.message.reply_text(
+        "Hello this is the AIS customer support BOT Please type \n/login for login\n /help for FAQ\n/claims to view any active claims ")
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "1: Lorem Ipsum is simplywhen an unknown printer took a galley of type and scrambled it to make a type specimen book.\n\n" 
@@ -23,6 +25,22 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
     )
+async def claims_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if logged_in:
+        getresp=json.loads(get_claims(proposerid))
+        claim=getresp[0]
+        if(claim['status']):
+            await update.message.reply_text("no claims found using the given proposerID ")
+        else:
+            keys_to_divide = ['id', 'proposer', 'accident_id','created_at']
+            dict1, dict2 = divide_dict(claim, keys_to_divide)
+            claim_displayed_first_half=print_dict_as_table(dict1)
+            claim_displayed_second_half=print_dict_as_table(dict2)
+            await update.message.reply_text("login success\n"+str(claim_displayed_first_half)+"\n\n\n"+str(claim_displayed_second_half))
+            print("login Success")
+    else:
+        await update.message.reply_text("You must login to view claims")
+        
 def get_bearer(username,password):
     api_url = "http://ais.blackneb.com/api/token/"
     payload = {
@@ -71,30 +89,32 @@ def print_dict_as_table(dictionary):
     table = PrettyTable(dictionary.keys())
     table.add_row(dictionary.values())
     return table
+def divide_dict(dictionary, keys):
+    dict1 = {key: dictionary[key] for key in keys if key in dictionary}
+    dict2 = {key: dictionary[key] for key in dictionary if key not in keys}
+    return dict1, dict2
 async def login(update:Update,context:ContextTypes.DEFAULT_TYPE):
     global data
     data={'username':'','password':''}
-    await update.message.reply_text("add username and password in separated messages\n\nnow write Username")
+    await update.message.reply_text("Welcome enter your username and password in separated messages\nnow write Username")
     return USERNAME
 async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['username']=update.message.text
-    await update.message.reply_text(f"username: {update.message.text}\n\nnow write password")
+    await update.message.reply_text(f"Enter your password")
     return PASSWORD
 async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['password']=update.message.text
     resp_auth=get_bearer(data['username'],data['password'])
-    newresp=json.loads(resp_auth)
-    ref=newresp['refresh']
-    acc=newresp['access']
-    resp_acc=login_access(data['username'],data['password'],str(acc))
-    newresp_acc=json.loads(resp_acc)
-    stat=newresp_acc[0]
-    if(stat['status']=='pass'):
-        getresp=json.loads(get_claims(stat['proposerID']))
-        claim=getresp[0]
-        claim_displayed=print_dict_as_table(claim)
-        await update.message.reply_text("login success\n"+str(claim_displayed))
-        print("login Success")
+    if(resp_auth!=None):
+        newresp=json.loads(resp_auth)
+        ref=newresp['refresh']
+        acc=newresp['access']
+        resp_acc=login_access(data['username'],data['password'],str(acc))
+        newresp_acc=json.loads(resp_acc)
+        stat=newresp_acc[0]
+        proposerid=stat['proposerID']
+        logged_in=True
+        await update.message.reply_text("login Success. type /claims to view your claims")
     else:
         await update.message.reply_text("login failed. Please login again")
         print("login Failed")
@@ -103,7 +123,7 @@ async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('canceled')
     # end of conversation
     return ConversationHandler.END
-my_conversation_handler = ConversationHandler(
+my_conversation_handler_login = ConversationHandler(
    entry_points=[CommandHandler('login', login)],
    states={
        USERNAME: [
@@ -117,6 +137,7 @@ my_conversation_handler = ConversationHandler(
    },
    fallbacks=[CommandHandler('cancel', cancel)],
    conversation_timeout=None
+
 ) 
 # Log errors
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -128,9 +149,10 @@ if __name__ == '__main__':
     # Commands
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(CommandHandler('help', help_command))
+    app.add_handler(CommandHandler('claims', claims_command))
     # Messages
     # app.add_handler(MessageHandler(filters.TEXT, handle_message))
-    app.add_handler( my_conversation_handler)
+    app.add_handler( my_conversation_handler_login)
     # Log all errors
     app.add_error_handler(error)
 
