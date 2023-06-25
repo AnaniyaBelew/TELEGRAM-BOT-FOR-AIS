@@ -9,10 +9,9 @@ print('Starting up bot...')
 TOKEN: Final = '6214753896:AAEyoypGyT84yxz3e3hWqsYGQdW8SZvylPA'
 BOT_USERNAME: Final = '@AISASTU_bot'
 data={'username':'','password':''}
-logged_in=False
 USERNAME=1 
 PASSWORD =2
-proposerid=''
+resp_acc={}
 # Lets us use the /start command
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -24,23 +23,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "3: Lorem Ipsum is simply dummy text of the printing and typesetting industry.\n\n"
         "4: Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
         reply_markup=ReplyKeyboardRemove()
-    )
-async def claims_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if logged_in:
-        getresp=json.loads(get_claims(proposerid))
-        claim=getresp[0]
-        if(claim['status']):
-            await update.message.reply_text("no claims found using the given proposerID ")
-        else:
-            keys_to_divide = ['id', 'proposer', 'accident_id','created_at']
-            dict1, dict2 = divide_dict(claim, keys_to_divide)
-            claim_displayed_first_half=print_dict_as_table(dict1)
-            claim_displayed_second_half=print_dict_as_table(dict2)
-            await update.message.reply_text("login success\n"+str(claim_displayed_first_half)+"\n\n\n"+str(claim_displayed_second_half))
-            print("login Success")
-    else:
-        await update.message.reply_text("You must login to view claims")
-        
+    )   
 def get_bearer(username,password):
     api_url = "http://ais.blackneb.com/api/token/"
     payload = {
@@ -96,7 +79,7 @@ def divide_dict(dictionary, keys):
 async def login(update:Update,context:ContextTypes.DEFAULT_TYPE):
     global data
     data={'username':'','password':''}
-    await update.message.reply_text("Welcome enter your username and password in separated messages\nnow write Username")
+    await update.message.reply_text("Welcome enter your username and password in separated messages\n\n Username: ")
     return USERNAME
 async def get_username(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['username']=update.message.text
@@ -106,19 +89,34 @@ async def get_password(update:Update,context:ContextTypes.DEFAULT_TYPE):
     data['password']=update.message.text
     resp_auth=get_bearer(data['username'],data['password'])
     if(resp_auth!=None):
+        global resp_acc
+        logged_in=True
         newresp=json.loads(resp_auth)
         ref=newresp['refresh']
         acc=newresp['access']
         resp_acc=login_access(data['username'],data['password'],str(acc))
-        newresp_acc=json.loads(resp_acc)
-        stat=newresp_acc[0]
-        proposerid=stat['proposerID']
-        logged_in=True
         await update.message.reply_text("login Success. type /claims to view your claims")
     else:
         await update.message.reply_text("login failed. Please login again")
         print("login Failed")
     return ConversationHandler.END
+async def claims_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        global resp_acc
+        newresp_acc=json.loads(resp_acc)
+        stat_glob=newresp_acc[0]
+        print(stat_glob)
+        getresp=json.loads(get_claims(stat_glob['proposerID']))
+        if(getresp=={}):
+            await update.message.reply_text("no claims found using the given proposerID ")
+        else:
+            for claim in getresp:
+                print(claim)
+                keys_to_divide = ['id', 'proposer', 'accident_id','created_at']
+                dict1, dict2 = divide_dict(claim, keys_to_divide)
+                claim_displayed_first_half=print_dict_as_table(dict1)
+                claim_displayed_second_half=print_dict_as_table(dict2)
+                await update.message.reply_text("Active claims\n\n"+str(claim_displayed_first_half)+"\n\n\n"+str(claim_displayed_second_half))
+   
 async def cancel(update:Update,context:ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('canceled')
     # end of conversation
